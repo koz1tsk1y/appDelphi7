@@ -1,0 +1,336 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, Grids;
+
+type
+  TForm1 = class(TForm)
+    Label2: TLabel;
+    Button1: TButton;
+    Label3: TLabel;
+    Memo1: TMemo;
+    Memo2: TMemo;
+    Label4: TLabel;
+    Label5: TLabel;
+    Image1: TImage;
+    Label1: TLabel;
+    Memo3: TMemo;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+  s,ss: string;
+  n: integer;
+
+implementation
+
+{$R *.dfm}
+
+
+
+//========Добавление=в=массив=слов================
+procedure ad;
+var
+  flag: boolean;
+  i: integer;
+  bufer: string;
+begin
+
+  if length(s)=0 then
+    exit;
+
+
+  {Добавления слова в поле вывода}
+  Form1.Memo3.Lines.Add(s);
+  n:=n+1;
+  s:='';
+
+
+  {Сортировка слов в алфавитном порядке}
+  repeat
+
+    flag:=false;
+    for i:=0 to n-2 do
+      if AnsiCompareText(Form1.Memo3.Lines[i],Form1.Memo3.Lines[i+1])>0 then
+        begin
+          bufer:=Form1.Memo3.Lines[i];
+          Form1.Memo3.Lines[i]:=Form1.Memo3.Lines[i+1];
+          Form1.Memo3.Lines[i+1]:=bufer;
+          flag:=true;
+        end;
+
+  until flag=false;
+
+end;
+
+
+
+//===============Вычисления=значения=упрощённого=выражения=========
+function res: string;
+
+var
+  op1,op2: real;
+  resul: string;
+  i,j: integer;
+  flag: boolean;
+
+begin
+
+
+  resul:=ss;
+  insert(' ',ss,length(ss)+1);
+
+
+  {Вычисление значения выражения}
+  repeat
+
+    flag:=false;
+
+    for i:=1 to length(ss) do
+
+        if ss[i] in ['+','-'] then
+          begin
+
+            if i=1 then continue; //если первый символ "-", то пропустить проход цикла
+
+            flag:=true; //наличие операторов(+,-)
+
+            op1:=StrToFloat(copy(ss,1,i-1));  //первый операнд
+
+            for j:=i+1 to length(ss) do
+              if ss[j] in ['+','-',' '] then
+                begin
+                  op2:=StrToFloat(copy(ss,i+1,j-(i+1)));  //второй операнд
+                  break;
+                end;
+
+            if ss[i]='+' then
+              resul:=FloatToStr(op1+op2)
+            else
+              resul:=FloatToStr(op1-op2);
+
+            delete(ss,1,j-1);
+            insert(resul,ss,1);
+            break;
+
+          end;
+
+  until flag=false;
+
+  res:=resul;
+
+end;
+
+
+
+//===================Упрощение=выражения======================
+procedure easy(pos1,pos2,pos3: integer);
+var
+  op1,op2: real;
+  znak,result: string;
+begin
+
+  op1:=StrToFloat(copy(ss,pos2+1,pos1-(pos2+1))); //операнд слева от знака
+  op2:=StrToFloat(copy(ss,pos1+1,pos3-(pos1+1))); //операнд справа от знака
+  znak:=copy(ss,pos1,1);  //оператор(*,/) между операндами
+
+  if znak='*' then
+    result:=FloatToStr(op1*op2)
+  else
+    result:=FloatToStr(op1/op2);
+
+  {Замена приоритетного действия его результатом}
+  delete(ss,pos2+1,pos3-(pos2+1));
+  insert(result,ss,pos2+1);
+
+end;
+
+
+
+//========Вычисления=значения=арифметических=операций==========
+procedure calculation;
+var
+  i,j,posPriority,posBegin,posEnd: integer;
+  fPriority: boolean;
+begin
+
+   Form1.Memo1.Text:=Form1.Memo1.Text+ss+' = '; //вывод первой половины выражения
+
+   repeat
+
+    posPriority:=0;       //позиция оператора(*,/)
+    posBegin:=0;          //ограничение начала приоритетного действия
+    posEnd:=length(ss)+1; //ограничение конца приоритетного действия
+
+    fPriority:=false;   //контроль наличия приоритетного действия
+
+
+    {Упрощение выражения, т.е. вычисление приоритетных действий(*,/)}
+    for i:=1 to length(ss) do
+    begin
+
+      if ss[i] in ['*','/'] then
+        begin
+
+          posPriority:=i;
+          fPriority:=true;
+
+          {ограничение начала приоритетного действия}
+          for j:=i-1 downto 1 do
+            if ss[j] in ['-','+','/','*'] then
+              begin
+                posBegin:=j;
+                break;
+              end;
+
+          {ограничение конца приоритетного действия}
+          for j:=i+1 to length(ss) do
+            if ss[j] in ['-','+','*','/'] then
+              begin
+                posEnd:=j;
+                break;
+              end;
+
+          {Проверка деления на ноль}
+          if (ss[i]='/') and ((copy(ss,posPriority+1,posEnd-(posPriority+1)))='0') then
+            begin
+              Form1.Memo1.Text:=Form1.Memo1.Text+'ошибка'+#13+#10;
+              exit;
+            end;
+
+          easy(posPriority,posBegin,posEnd); //вызов процедуры упрощения выражения
+          break;
+
+        end;
+
+    end;
+
+   until fPriority=false; //условие выхода: отсутствие приоритетных действий
+
+   Form1.Memo1.Text:=Form1.Memo1.Text+res+#13+#10;  //вывод второй части выражения
+                                                    //res - функция возвращающая результат
+end;
+
+
+
+//=========Нажатие=на=кнопку="Найти"==============
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  i: integer;
+  st: string;
+  fZnak, fDrob: boolean;
+begin
+
+
+  {Проверка на пустой ввод}
+  if Form1.Memo2.Text='' then
+    begin
+      Form1.Label5.Caption:='Поле ввода не может быть пустым';
+      Form1.Memo1.Text:='(Нет выражений)';
+      Form1.Memo3.Text:='(Нет слов)';
+      Form1.Memo2.SetFocus;
+      exit;
+    end;
+
+
+  {Обработка строки}
+  Form1.Memo1.Text:=''; //очистка поле вывода выражений
+  Form1.Memo3.Text:=''; //очистить поле вывода для слов
+  Form1.Label5.Caption:=''; //очистка поле вывода ошибки
+  ss:=''; //очистить строку для арифметической операции
+  s:='';  //очистить строку для слова
+  n:=0;   //обнуление количества строк для слов
+
+  st:=Form1.Memo2.Text; //присвоить переменной содержимое поле memo
+
+  fZnak:=false; //контроль ввода операторов(+,-,/,*)
+  fDrob:=true;  //контроль ввода запятой
+
+
+  {Поиск арифметических операций}
+  for i:=1 to length(st)+1 do
+    begin
+
+      case st[i] of
+
+        '0'..'9': begin
+                    ss:=ss+st[i];
+                    ad;
+                  end;
+
+        '+','-','*','/': if (length(ss)<>0) then
+                            if ss[length(ss)] in ['0'..'9'] then
+                              begin
+                                ss:=ss+st[i];
+                                fZnak:=true;
+                                fDrob:=true;
+                              end
+                            else
+                              begin
+                                ss:='';
+                                ad;
+                                fZnak:=false;
+                                fDrob:=true;
+                              end;
+
+        ',': if (length(ss)<>0) then
+                if (ss[length(ss)] in ['0'..'9'])
+                  and
+                  (fDrob=true) then
+                    begin
+                      ss:=ss+st[i];
+                      fDrob:=false;
+                    end
+                    else
+                      begin
+                        fDrob:=true;
+                        fZnak:=false;
+                        ss:='';
+                        ad;
+                      end;
+
+      else
+        begin
+
+          {Вывод выражения}
+          if length(ss)<>0 then
+            if (ss[length(ss)] in ['0'..'9'])
+               and (fZnak=true) then
+                  calculation;
+
+          ss:=''; //обнуление строки
+          fDrob:=true;
+          fZnak:=false;
+
+          if ((st[i]) in ['А'..'я'])
+             or
+             ((st[i]) in ['A'..'Z'])
+             or
+             ((st[i]) in ['a'..'z']) then
+            s:=s+st[i]
+          else
+            ad;
+
+        end;  //закрытие else
+
+      end;  //закрытие case
+
+    end;  //закрытие цикла for
+
+    if Form1.Memo1.Text='' then
+      Form1.Memo1.Text:='(Нет выражений)';
+
+    if Form1.Memo3.Text='' then
+      Form1.Memo3.Text:='(Нет слов)';
+
+end;
+
+end.
